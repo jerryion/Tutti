@@ -68,5 +68,9 @@ public class Tutti {
         return result;
     }
 
+    public void release(){
+        mSoundPool.release();
+        mSoundPool = null;
+    }
 
 }
