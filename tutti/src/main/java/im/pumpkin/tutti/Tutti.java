@@ -16,61 +16,82 @@ import java.util.Map;
 
 public class Tutti {
 
-    private final int DEFAULT_MAX_STREAMS = 10;
+    private final int DEFAULT_MAX_STREAMS = 4;
 
     private final Map<Method, SoundMethod> soundMethodCache = new LinkedHashMap<>();
 
     private Context mContext;
 
+    private boolean mLoadEagerly;
+
     private SoundPool mSoundPool;
 
-    public Tutti(Context context) {
+    private Tutti(Context context, int maxStreams, boolean loadEagerly) {
         mContext = context;
-        init();
+        mLoadEagerly = loadEagerly;
+        maxStreams = maxStreams > 0 ? maxStreams : DEFAULT_MAX_STREAMS;
+        mSoundPool = new SoundPool(maxStreams, AudioManager.STREAM_MUSIC, 0);
     }
 
-    private void init(){
-        mSoundPool = new SoundPool(DEFAULT_MAX_STREAMS, AudioManager.STREAM_MUSIC,0);
-    }
 
-    public <T> T create(Class<T> subject){
-        validateMethods(subject);
+    public <T> T create(Class<T> subject) {
+        if (mLoadEagerly) {
+            for (Method method : subject.getDeclaredMethods()) {
+                loadSoundMethod(method);
+            }
+        }
         return (T) Proxy.newProxyInstance(subject.getClassLoader(), new Class<?>[]{subject}, new InvocationHandler() {
             @Override
             public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
                 if (method.getDeclaringClass() == Object.class) {
                     return method.invoke(this, args);
                 }
-                SoundMethod soundMethod = soundMethodCache.get(method);
-                if(soundMethod == null){
-                    return null;
-                }
-                return mSoundPool.play(soundMethod.soundId,1,1,1,0,1);
+                SoundMethod soundMethod = loadSoundMethod(method);
+                return mSoundPool.play(soundMethod.soundId, soundMethod.leftVolume, soundMethod.rightVolume, soundMethod.priority, soundMethod.loop ? -1 : 0, soundMethod.rate);
             }
         });
     }
 
-    private void validateMethods(Class<?> sound){
-        for(Method method : sound.getDeclaredMethods()){
-            loadSoundMethod(method);
-        }
-    }
-
-    private SoundMethod loadSoundMethod(Method method){
-        SoundMethod result;
-        synchronized (soundMethodCache){
-            result = soundMethodCache.get(method);
-            if(result==null){
-                result = new SoundMethod(mContext,mSoundPool,method);
-                soundMethodCache.put(method,result);
-            }
+    private SoundMethod loadSoundMethod(Method method) {
+        SoundMethod result = soundMethodCache.get(method);
+        if (result == null) {
+            result = SoundMethod.newInstance(mContext, mSoundPool, method);
+            soundMethodCache.put(method, result);
         }
         return result;
     }
 
-    public void release(){
+    public void release() {
         mSoundPool.release();
         mSoundPool = null;
     }
 
+
+    public static final class Builder {
+
+        private Context context;
+        private int maxStreams;
+        private boolean loadEagerly;
+
+        public Builder(Context context) {
+            this.context = context;
+        }
+
+        public Builder maxStreams(int maxStreams) {
+            this.maxStreams = maxStreams;
+            return this;
+        }
+
+        // TODO: 2018/2/15 暂时关闭
+        private Builder loadEagerly(boolean loadEagerly) {
+            this.loadEagerly = loadEagerly;
+            return this;
+        }
+
+        public Tutti Build() {
+            // TODO: 2018/2/15 先加载资源
+            return new Tutti(this.context, this.maxStreams, true);
+        }
+
+    }
 }

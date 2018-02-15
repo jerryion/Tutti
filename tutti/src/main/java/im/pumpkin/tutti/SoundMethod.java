@@ -12,13 +12,28 @@ import java.lang.reflect.Method;
 public class SoundMethod {
 
     public int soundId;
+    public float leftVolume;
+    public float rightVolume;
+    public int priority;
+    public boolean loop;
+    public float rate;
 
-    public SoundMethod(Context context,SoundPool soundPool, Method method) {
+    private SoundMethod(Context context, SoundPool soundPool, Method method) {
         for (Annotation annotation : method.getDeclaredAnnotations()) {
-            if(annotation instanceof Sound){
-                int soundResource = ((Sound) annotation).resource();
-                soundId = soundPool.load(context,soundResource,1);
+            if (annotation instanceof Sound) {
+                Sound sound = (Sound) annotation;
+                leftVolume = sound.leftVolume();
+                rightVolume = sound.rightVolume();
+                priority = sound.priority();
+                loop = sound.loop();
+                rate = sound.rate();
+                soundId = soundPool.load(context, sound.resource(), 1);
             }
         }
+    }
+
+    public static SoundMethod newInstance(Context context, SoundPool soundPool, Method method) {
+        SoundMethod soundMethod = new SoundMethod(context, soundPool, method);
+        return soundMethod;
     }
 }

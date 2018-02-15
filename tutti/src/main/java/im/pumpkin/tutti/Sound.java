@@ -18,4 +18,13 @@ public @interface Sound {
     @RawRes
     int resource() default -1;
 
+    float leftVolume() default 1;
+
+    float rightVolume() default 1;
+
+    int priority() default 1;
+
+    boolean loop() default false;
+
+    float rate() default 1;
 }

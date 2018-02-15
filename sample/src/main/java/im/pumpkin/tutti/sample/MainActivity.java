@@ -17,7 +17,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mTutti = new Tutti(this);
+        mTutti = new Tutti.Builder(this)
+                .maxStreams(2)
+                .Build();
         mSoundSet = mTutti.create(SoundSet.class);
 
         findViewById(R.id.iv_camera).setOnClickListener(this);
